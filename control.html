@@ -63,6 +63,13 @@
     border-color: var(--ow-orange);
   }
 
+  #name-msg {
+    min-height: 18px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--ow-red);
+  }
+
   #current {
     text-align: center;
     font-size: 48px;
@@ -194,6 +201,7 @@
     <label for="name-input">対象ユーザー（既存名を入力すると検索、無ければ新規作成）</label>
     <input id="name-input" list="name-suggestions" placeholder="ユーザー名を入力" autocomplete="off">
     <datalist id="name-suggestions"></datalist>
+    <div id="name-msg"></div>
   </div>
 
   <div id="current">0</div>
@@ -367,6 +375,8 @@
     renderCurrent();
   }
 
+  const MAX_USERS = 5;
+
   function addPoint(delta) {
     const name = currentName();
     if (!name) {
@@ -376,9 +386,14 @@
     const users = loadUsers();
     let user = findUser(users, name);
     if (!user) {
+      if (users.length >= MAX_USERS) {
+        document.getElementById('name-msg').textContent = `参加者は最大${MAX_USERS}人までです`;
+        return;
+      }
       user = { name, points: 0 };
       users.push(user);
     }
+    document.getElementById('name-msg').textContent = '';
     user.points += delta;
 
     let eventType = null;
@@ -418,7 +433,10 @@
     renderAll();
   });
 
-  nameInput.addEventListener('input', renderCurrent);
+  nameInput.addEventListener('input', () => {
+    document.getElementById('name-msg').textContent = '';
+    renderCurrent();
+  });
 
   window.addEventListener('keydown', (e) => {
     if (e.target === nameInput) {
