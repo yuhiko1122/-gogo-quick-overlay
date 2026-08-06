@@ -98,57 +98,36 @@
     100% { transform: scale(1); }
   }
 
-  #flash {
-    position: fixed;
-    inset: 0;
-    opacity: 0;
-    pointer-events: none;
-  }
-  #flash.show.bonus {
-    background: radial-gradient(circle, rgba(249,158,26,0.55), transparent 70%);
-    animation: flashPulse 0.8s ease;
-  }
-  #flash.show.penalty {
-    background: radial-gradient(circle, rgba(224,68,46,0.55), transparent 70%);
-    animation: flashPulse 0.8s ease;
-  }
-  @keyframes flashPulse {
-    0%   { opacity: 0; }
-    12%  { opacity: 1; }
-    100% { opacity: 0; }
-  }
-
   #event-overlay {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.4);
+    top: 210px;
+    right: 24px;
+    max-width: 340px;
+    transform: translateX(140%);
     opacity: 0;
     pointer-events: none;
   }
 
   #event-overlay .card {
-    min-width: 460px;
-    padding: 30px 50px 34px;
-    background: linear-gradient(160deg, var(--ow-dark2), var(--ow-dark));
-    border-radius: 8px;
-    text-align: center;
-    text-shadow: 0 0 20px rgba(0,0,0,0.8);
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--ow-dark2), var(--ow-dark));
+    border-radius: 12px;
+    text-shadow: 0 0 12px rgba(0,0,0,0.6);
   }
 
   #event-overlay.bonus .card {
-    border: 3px solid var(--ow-orange);
-    box-shadow: 0 0 50px rgba(249,158,26,0.65), 0 10px 40px rgba(0,0,0,0.7);
+    border: 2px solid var(--ow-orange);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.6), 0 0 22px rgba(249,158,26,0.4);
   }
   #event-overlay.penalty .card {
-    border: 3px solid var(--ow-red);
-    box-shadow: 0 0 50px rgba(224,68,46,0.65), 0 10px 40px rgba(0,0,0,0.7);
+    border: 2px solid var(--ow-red);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.6), 0 0 22px rgba(224,68,46,0.4);
   }
 
   #event-overlay .badge {
     font-weight: 900;
-    font-size: 54px;
-    letter-spacing: 8px;
+    font-size: 22px;
+    letter-spacing: 3px;
     text-transform: uppercase;
   }
   #event-overlay.bonus .badge { color: var(--ow-orange); }
@@ -156,31 +135,29 @@
 
   #event-overlay .who {
     color: var(--ow-white);
-    font-weight: 900;
-    font-size: 28px;
-    margin-top: 8px;
+    font-weight: 700;
+    font-size: 16px;
+    margin-top: 4px;
   }
 
   #event-overlay .effect {
-    margin-top: 16px;
-    color: var(--ow-white);
-    font-size: 22px;
-    font-weight: 700;
+    margin-top: 8px;
+    color: #ddd;
+    font-size: 13px;
+    font-weight: 600;
     line-height: 1.6;
     white-space: pre-line;
   }
 
   #event-overlay.show {
-    animation: eventShow 3.4s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+    animation: toastShow 3.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
-  @keyframes eventShow {
-    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(-3deg); }
-    10%  { opacity: 1; transform: translate(-50%, -50%) scale(1.12) rotate(1deg); }
-    18%  { transform: translate(-50%, -50%) scale(0.97) rotate(0deg); }
-    24%  { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-    88%  { opacity: 1; }
-    100% { opacity: 0; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  @keyframes toastShow {
+    0%   { opacity: 0; transform: translateX(140%); }
+    8%   { opacity: 1; transform: translateX(0); }
+    85%  { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(140%); }
   }
 </style>
 </head>
@@ -191,7 +168,6 @@
   <div id="board"></div>
 </div>
 
-<div id="flash"></div>
 <div id="event-overlay">
   <div class="card">
     <div class="badge"></div>
@@ -263,17 +239,14 @@
 
   function showEvent(type, name) {
     const overlay = document.getElementById('event-overlay');
-    const flash = document.getElementById('flash');
 
     overlay.querySelector('.badge').textContent = type === 'bonus' ? 'BONUS!' : 'PENALTY!';
     overlay.querySelector('.who').textContent = name || '';
     overlay.querySelector('.effect').textContent = EFFECT_TEXT[type] || '';
 
     overlay.classList.remove('show', 'bonus', 'penalty');
-    flash.classList.remove('show', 'bonus', 'penalty');
     void overlay.offsetWidth;
     overlay.classList.add('show', type);
-    flash.classList.add('show', type);
   }
 
   render(loadUsers());
