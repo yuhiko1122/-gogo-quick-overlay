@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ゴーゴークイック - 操作パネル</title>
+<style>
+  :root {
+    --ow-orange: #F99E1A;
+    --ow-dark: #10151F;
+    --ow-dark2: #1B2432;
+    --ow-white: #F4F4F4;
+    --ow-red: #E0442E;
+    --ow-green: #7CD87C;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--ow-dark);
+    color: var(--ow-white);
+    font-family: "Yu Gothic", "Meiryo", "Segoe UI", sans-serif;
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+
+  #wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  h1 {
+    color: var(--ow-orange);
+    font-size: 20px;
+    letter-spacing: 2px;
+    text-align: center;
+    margin: 0 0 20px;
+  }
+
+  #name-field {
+    margin-bottom: 14px;
+  }
+
+  #name-field label {
+    display: block;
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 4px;
+  }
+
+  #name-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 20px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 2px solid var(--ow-dark2);
+    background: var(--ow-dark2);
+    color: var(--ow-white);
+  }
+  #name-input:focus {
+    outline: none;
+    border-color: var(--ow-orange);
+  }
+
+  #current {
+    text-align: center;
+    font-size: 48px;
+    font-weight: 900;
+    margin: 14px 0 20px;
+    transition: color 0.2s ease;
+  }
+  #current.positive { color: var(--ow-green); }
+  #current.negative { color: var(--ow-red); }
+
+  #buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+
+  button {
+    font-size: 22px;
+    font-weight: 900;
+    border: none;
+    border-radius: 6px;
+    padding: 18px 0;
+    width: 120px;
+    cursor: pointer;
+    transition: transform 0.08s ease, filter 0.15s ease;
+  }
+  button:active { transform: scale(0.94); }
+
+  #btn-plus { background: var(--ow-orange); color: var(--ow-dark); }
+  #btn-minus { background: var(--ow-dark2); color: var(--ow-white); border: 2px solid var(--ow-red); }
+  #btn-plus:hover, #btn-minus:hover { filter: brightness(1.15); }
+
+  .hint {
+    text-align: center;
+    color: #777;
+    font-size: 12px;
+    margin-bottom: 24px;
+  }
+
+  #row-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 30px;
+  }
+  .small-btn {
+    background: transparent;
+    color: #888;
+    border: 1px solid #444;
+    width: auto;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: normal;
+  }
+  .small-btn:hover { color: var(--ow-red); border-color: var(--ow-red); }
+
+  #user-list {
+    margin-bottom: 24px;
+  }
+  #user-list h2 {
+    font-size: 13px;
+    color: #999;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .user-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: var(--ow-dark2);
+    border-radius: 4px;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+  .user-row:hover { outline: 1px solid var(--ow-orange); }
+  .user-row .u-name { font-weight: 700; }
+  .user-row .u-points { font-weight: 900; margin-left: auto; margin-right: 10px; }
+  .user-row .u-points.positive { color: var(--ow-green); }
+  .user-row .u-points.negative { color: var(--ow-red); }
+  .user-row .u-del {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 16px;
+    width: auto;
+    padding: 0 4px;
+  }
+  .user-row .u-del:hover { color: var(--ow-red); }
+  #no-users {
+    color: #666;
+    font-size: 13px;
+  }
+
+  details {
+    background: var(--ow-dark2);
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 10px;
+  }
+  summary {
+    cursor: pointer;
+    color: var(--ow-orange);
+    font-weight: bold;
+    font-size: 14px;
+  }
+  ul {
+    margin: 10px 0 4px;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .bonus-line {
+    font-size: 12px;
+    color: #aaa;
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>ゴーゴークイック 操作パネル</h1>
+
+  <div id="name-field">
+    <label for="name-input">対象ユーザー（既存名を入力すると検索、無ければ新規作成）</label>
+    <input id="name-input" list="name-suggestions" placeholder="ユーザー名を入力" autocomplete="off">
+    <datalist id="name-suggestions"></datalist>
+  </div>
+
+  <div id="current">0</div>
+
+  <div id="buttons">
+    <button id="btn-minus">－1</button>
+    <button id="btn-plus">＋1</button>
+  </div>
+  <div class="hint">キーボードの ［+ / -］ でも操作できます</div>
+
+  <div id="row-actions">
+    <button class="small-btn" id="btn-reset-user">この人を0にリセット</button>
+    <button class="small-btn" id="btn-delete-user">この人を削除</button>
+  </div>
+
+  <div id="user-list">
+    <h2>参加者一覧（クリックで選択）</h2>
+    <div id="user-list-body"></div>
+  </div>
+
+  <details>
+    <summary>＋1ルール</summary>
+    <ul>
+      <li>POTGを取る／MVP画面に載る</li>
+      <li>タンク/DPSのとき、自分の倍以上のダメージを出す</li>
+      <li>「行かないで」など引き留められる</li>
+      <li>わかりにくい／グルタイミングでのデス</li>
+    </ul>
+  </details>
+
+  <details>
+    <summary>－1ルール</summary>
+    <ul>
+      <li>キュンとさせる（守られるなど）</li>
+      <li>1人で拠点を管理する</li>
+      <li>チームを勝たせたと思われる行為</li>
+      <li>ダイブ/ラッシュ魂を捨てる行為</li>
+    </ul>
+  </details>
+
+  <div class="bonus-line">
+    合計 +10 到達 → 次の回は抜けられる（フルパ以上）／指定キャラ強制（フルパ以下）→ 本人のみ自動で0にリセット<br>
+    合計 −10 到達 → IGLの権利 1ウェーブ → 本人のみ自動で0にリセット
+  </div>
+</div>
+
+<script>
+  const USERS_KEY = 'gogo_users';
+  const EVENT_KEY = 'gogo_event';
+
+  const nameInput = document.getElementById('name-input');
+  const currentEl = document.getElementById('current');
+
+  function loadUsers() {
+    try {
+      const v = JSON.parse(localStorage.getItem(USERS_KEY));
+      return Array.isArray(v) ? v : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveUsers(users) {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  }
+
+  function fireEvent(type, name) {
+    localStorage.setItem(EVENT_KEY, JSON.stringify({ type, name, ts: Date.now() }));
+  }
+
+  function findUser(users, name) {
+    return users.find(u => u.name === name);
+  }
+
+  function currentName() {
+    return nameInput.value.trim();
+  }
+
+  function renderCurrent() {
+    const name = currentName();
+    const users = loadUsers();
+    const user = findUser(users, name);
+    const points = user ? user.points : 0;
+    currentEl.textContent = (points > 0 ? '+' : '') + points;
+    currentEl.classList.toggle('positive', points > 0);
+    currentEl.classList.toggle('negative', points < 0);
+  }
+
+  function renderSuggestions(users) {
+    const dl = document.getElementById('name-suggestions');
+    dl.innerHTML = '';
+    users.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.name;
+      dl.appendChild(opt);
+    });
+  }
+
+  function renderUserList(users) {
+    const body = document.getElementById('user-list-body');
+    body.innerHTML = '';
+    if (users.length === 0) {
+      body.innerHTML = '<div id="no-users">まだ誰も登録されていません</div>';
+      return;
+    }
+    const sorted = [...users].sort((a, b) => b.points - a.points);
+    sorted.forEach(u => {
+      const row = document.createElement('div');
+      row.className = 'user-row';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'u-name';
+      nameEl.textContent = u.name;
+
+      const ptsEl = document.createElement('div');
+      ptsEl.className = 'u-points';
+      ptsEl.textContent = (u.points > 0 ? '+' : '') + u.points;
+      ptsEl.classList.toggle('positive', u.points > 0);
+      ptsEl.classList.toggle('negative', u.points < 0);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'u-del';
+      delBtn.textContent = '×';
+      delBtn.title = '削除';
+      delBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (confirm(`「${u.name}」を削除しますか？`)) {
+          const remaining = loadUsers().filter(x => x.name !== u.name);
+          saveUsers(remaining);
+          renderAll();
+        }
+      });
+
+      row.addEventListener('click', () => {
+        nameInput.value = u.name;
+        renderCurrent();
+      });
+
+      row.appendChild(nameEl);
+      row.appendChild(ptsEl);
+      row.appendChild(delBtn);
+      body.appendChild(row);
+    });
+  }
+
+  function renderAll() {
+    const users = loadUsers();
+    renderSuggestions(users);
+    renderUserList(users);
+    renderCurrent();
+  }
+
+  function addPoint(delta) {
+    const name = currentName();
+    if (!name) {
+      nameInput.focus();
+      return;
+    }
+    const users = loadUsers();
+    let user = findUser(users, name);
+    if (!user) {
+      user = { name, points: 0 };
+      users.push(user);
+    }
+    user.points += delta;
+
+    let eventType = null;
+    if (user.points >= 10) {
+      eventType = 'bonus';
+      user.points = 0;
+    } else if (user.points <= -10) {
+      eventType = 'penalty';
+      user.points = 0;
+    }
+
+    saveUsers(users);
+    if (eventType) fireEvent(eventType, name);
+    renderAll();
+  }
+
+  document.getElementById('btn-plus').addEventListener('click', () => addPoint(1));
+  document.getElementById('btn-minus').addEventListener('click', () => addPoint(-1));
+
+  document.getElementById('btn-reset-user').addEventListener('click', () => {
+    const name = currentName();
+    if (!name) return;
+    const users = loadUsers();
+    const user = findUser(users, name);
+    if (!user) return;
+    if (confirm(`「${name}」のポイントを0にリセットしますか？`)) {
+      user.points = 0;
+      saveUsers(users);
+      renderAll();
+    }
+  });
+
+  document.getElementById('btn-delete-user').addEventListener('click', () => {
+    const name = currentName();
+    if (!name) return;
+    if (!findUser(loadUsers(), name)) return;
+    if (confirm(`「${name}」を削除しますか？`)) {
+      saveUsers(loadUsers().filter(x => x.name !== name));
+      nameInput.value = '';
+      renderAll();
+    }
+  });
+
+  nameInput.addEventListener('input', renderCurrent);
+
+  window.addEventListener('keydown', (e) => {
+    if (e.target === nameInput) {
+      if (e.key === 'Enter') e.target.blur();
+      return;
+    }
+    if (e.key === '+' || e.key === '=') addPoint(1);
+    if (e.key === '-' || e.key === '_') addPoint(-1);
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === USERS_KEY) renderAll();
+  });
+
+  renderAll();
+</script>
+</body>
+</html>

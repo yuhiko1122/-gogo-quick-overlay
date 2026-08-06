@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ゴーゴークイック - 表示</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+    font-family: "Yu Gothic", "Meiryo", "Segoe UI", sans-serif;
+  }
+
+  :root {
+    --ow-orange: #F99E1A;
+    --ow-dark: #10151F;
+    --ow-dark2: #1B2432;
+    --ow-white: #F4F4F4;
+    --ow-red: #E0442E;
+    --ow-green: #7CD87C;
+  }
+
+  #panel {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    min-width: 260px;
+    display: flex;
+    flex-direction: column;
+    padding: 14px 22px 18px;
+    background: linear-gradient(135deg, var(--ow-dark2), var(--ow-dark));
+    border: 2px solid var(--ow-orange);
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+  }
+
+  #label {
+    color: var(--ow-orange);
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-shadow: 0 0 8px rgba(249,158,26,0.5);
+  }
+
+  #board {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 4px 2px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .row .name {
+    color: var(--ow-white);
+    font-weight: 700;
+    font-size: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+
+  .row .value {
+    font-weight: 900;
+    font-size: 24px;
+    color: var(--ow-white);
+    transition: color 0.2s ease;
+  }
+
+  .row .value.positive { color: var(--ow-green); }
+  .row .value.negative { color: var(--ow-red); }
+
+  .row.pulse .value {
+    animation: pulse 0.35s ease;
+  }
+
+  #empty {
+    color: #777;
+    font-size: 13px;
+    padding: 4px 2px;
+  }
+
+  @keyframes pulse {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+
+  #flash {
+    position: fixed;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #flash.show.bonus {
+    background: radial-gradient(circle, rgba(249,158,26,0.55), transparent 70%);
+    animation: flashPulse 0.8s ease;
+  }
+  #flash.show.penalty {
+    background: radial-gradient(circle, rgba(224,68,46,0.55), transparent 70%);
+    animation: flashPulse 0.8s ease;
+  }
+  @keyframes flashPulse {
+    0%   { opacity: 0; }
+    12%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  #event-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #event-overlay .card {
+    min-width: 460px;
+    padding: 30px 50px 34px;
+    background: linear-gradient(160deg, var(--ow-dark2), var(--ow-dark));
+    border-radius: 8px;
+    text-align: center;
+    text-shadow: 0 0 20px rgba(0,0,0,0.8);
+  }
+
+  #event-overlay.bonus .card {
+    border: 3px solid var(--ow-orange);
+    box-shadow: 0 0 50px rgba(249,158,26,0.65), 0 10px 40px rgba(0,0,0,0.7);
+  }
+  #event-overlay.penalty .card {
+    border: 3px solid var(--ow-red);
+    box-shadow: 0 0 50px rgba(224,68,46,0.65), 0 10px 40px rgba(0,0,0,0.7);
+  }
+
+  #event-overlay .badge {
+    font-weight: 900;
+    font-size: 54px;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+  }
+  #event-overlay.bonus .badge { color: var(--ow-orange); }
+  #event-overlay.penalty .badge { color: var(--ow-red); }
+
+  #event-overlay .who {
+    color: var(--ow-white);
+    font-weight: 900;
+    font-size: 28px;
+    margin-top: 8px;
+  }
+
+  #event-overlay .effect {
+    margin-top: 16px;
+    color: var(--ow-white);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.6;
+    white-space: pre-line;
+  }
+
+  #event-overlay.show {
+    animation: eventShow 3.4s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+  }
+
+  @keyframes eventShow {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(-3deg); }
+    10%  { opacity: 1; transform: translate(-50%, -50%) scale(1.12) rotate(1deg); }
+    18%  { transform: translate(-50%, -50%) scale(0.97) rotate(0deg); }
+    24%  { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+    88%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  }
+</style>
+</head>
+<body>
+
+<div id="panel">
+  <div id="label">ゴーゴークイック</div>
+  <div id="board"></div>
+</div>
+
+<div id="flash"></div>
+<div id="event-overlay">
+  <div class="card">
+    <div class="badge"></div>
+    <div class="who"></div>
+    <div class="effect"></div>
+  </div>
+</div>
+
+<script>
+  const USERS_KEY = 'gogo_users';
+  const EVENT_KEY = 'gogo_event';
+
+  let prevPoints = {};
+
+  function loadUsers() {
+    try {
+      const v = JSON.parse(localStorage.getItem(USERS_KEY));
+      return Array.isArray(v) ? v : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function render(users) {
+    const board = document.getElementById('board');
+    const empty = document.getElementById('empty');
+
+    if (users.length === 0) {
+      board.innerHTML = '<div id="empty">参加者はまだいません</div>';
+      prevPoints = {};
+      return;
+    }
+
+    const sorted = [...users].sort((a, b) => b.points - a.points);
+
+    board.innerHTML = '';
+    sorted.forEach(u => {
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'name';
+      nameEl.textContent = u.name;
+
+      const valEl = document.createElement('div');
+      valEl.className = 'value';
+      valEl.textContent = (u.points > 0 ? '+' : '') + u.points;
+      valEl.classList.toggle('positive', u.points > 0);
+      valEl.classList.toggle('negative', u.points < 0);
+
+      if (prevPoints[u.name] !== undefined && prevPoints[u.name] !== u.points) {
+        row.classList.add('pulse');
+      }
+
+      row.appendChild(nameEl);
+      row.appendChild(valEl);
+      board.appendChild(row);
+    });
+
+    const next = {};
+    users.forEach(u => { next[u.name] = u.points; });
+    prevPoints = next;
+  }
+
+  const EFFECT_TEXT = {
+    bonus: '次の回は抜けられる（フルパ以上）\nor 指定キャラを使う（フルパ以下）',
+    penalty: 'IGLの権利 1ウェーブ'
+  };
+
+  function showEvent(type, name) {
+    const overlay = document.getElementById('event-overlay');
+    const flash = document.getElementById('flash');
+
+    overlay.querySelector('.badge').textContent = type === 'bonus' ? 'BONUS!' : 'PENALTY!';
+    overlay.querySelector('.who').textContent = name || '';
+    overlay.querySelector('.effect').textContent = EFFECT_TEXT[type] || '';
+
+    overlay.classList.remove('show', 'bonus', 'penalty');
+    flash.classList.remove('show', 'bonus', 'penalty');
+    void overlay.offsetWidth;
+    overlay.classList.add('show', type);
+    flash.classList.add('show', type);
+  }
+
+  render(loadUsers());
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === USERS_KEY) {
+      render(loadUsers());
+    }
+    if (e.key === EVENT_KEY && e.newValue) {
+      try {
+        const data = JSON.parse(e.newValue);
+        showEvent(data.type, data.name);
+      } catch (err) { /* ignore malformed event */ }
+    }
+  });
+</script>
+
+</body>
+</html>
