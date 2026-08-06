@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ゴーゴークイック</title>
+<style>
+  :root {
+    --ow-orange: #F99E1A;
+    --ow-dark: #10151F;
+    --ow-dark2: #1B2432;
+    --ow-white: #F4F4F4;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: var(--ow-dark);
+    color: var(--ow-white);
+    font-family: "Yu Gothic", "Meiryo", "Segoe UI", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #card {
+    text-align: center;
+    padding: 40px 48px;
+  }
+  h1 {
+    color: var(--ow-orange);
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+  p {
+    color: #999;
+    margin-bottom: 32px;
+  }
+  .links {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+  }
+  a {
+    display: block;
+    padding: 16px 28px;
+    background: var(--ow-dark2);
+    border: 2px solid var(--ow-orange);
+    border-radius: 8px;
+    color: var(--ow-white);
+    text-decoration: none;
+    font-weight: 700;
+  }
+  a:hover {
+    background: var(--ow-orange);
+    color: var(--ow-dark);
+  }
+</style>
+</head>
+<body>
+<div id="card">
+  <h1>ゴーゴークイック</h1>
+  <p>参加型ポイントオーバーレイ</p>
+  <div class="links">
+    <a href="display.html">表示画面（OBS用）</a>
+    <a href="control.html">操作パネル</a>
+  </div>
+</div>
+</body>
+</html>
