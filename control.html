@@ -119,6 +119,7 @@
     font-weight: normal;
   }
   .small-btn:hover { color: var(--ow-red); border-color: var(--ow-red); }
+  .small-btn.armed { background: var(--ow-red); color: var(--ow-white); border-color: var(--ow-red); }
 
   #user-list {
     margin-bottom: 24px;
@@ -153,6 +154,7 @@
     padding: 0 4px;
   }
   .user-row .u-del:hover { color: var(--ow-red); }
+  .user-row .u-del.armed { color: var(--ow-red); font-weight: 900; }
   #no-users {
     color: #666;
     font-size: 13px;
@@ -266,6 +268,30 @@
     return users.find(u => u.name === name);
   }
 
+  // OBSのブラウザソース内ではwindow.confirm()が機能しないため、
+  // 「もう一度押すと確定」の2クリック式確認をここで代用する。
+  function armConfirm(btn, armedLabel, onConfirm) {
+    const originalLabel = btn.textContent;
+    let timer = null;
+
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (!btn.classList.contains('armed')) {
+        btn.classList.add('armed');
+        btn.textContent = armedLabel;
+        timer = setTimeout(() => {
+          btn.classList.remove('armed');
+          btn.textContent = originalLabel;
+        }, 2500);
+        return;
+      }
+      clearTimeout(timer);
+      btn.classList.remove('armed');
+      btn.textContent = originalLabel;
+      onConfirm();
+    });
+  }
+
   function currentName() {
     return nameInput.value.trim();
   }
@@ -315,14 +341,11 @@
       const delBtn = document.createElement('button');
       delBtn.className = 'u-del';
       delBtn.textContent = '×';
-      delBtn.title = '削除';
-      delBtn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (confirm(`「${u.name}」を削除しますか？`)) {
-          const remaining = loadUsers().filter(x => x.name !== u.name);
-          saveUsers(remaining);
-          renderAll();
-        }
+      delBtn.title = 'もう一度押すと削除';
+      armConfirm(delBtn, '確定', () => {
+        const remaining = loadUsers().filter(x => x.name !== u.name);
+        saveUsers(remaining);
+        renderAll();
       });
 
       row.addEventListener('click', () => {
@@ -375,28 +398,24 @@
   document.getElementById('btn-plus').addEventListener('click', () => addPoint(1));
   document.getElementById('btn-minus').addEventListener('click', () => addPoint(-1));
 
-  document.getElementById('btn-reset-user').addEventListener('click', () => {
+  armConfirm(document.getElementById('btn-reset-user'), 'もう一度押して確定', () => {
     const name = currentName();
     if (!name) return;
     const users = loadUsers();
     const user = findUser(users, name);
     if (!user) return;
-    if (confirm(`「${name}」のポイントを0にリセットしますか？`)) {
-      user.points = 0;
-      saveUsers(users);
-      renderAll();
-    }
+    user.points = 0;
+    saveUsers(users);
+    renderAll();
   });
 
-  document.getElementById('btn-delete-user').addEventListener('click', () => {
+  armConfirm(document.getElementById('btn-delete-user'), 'もう一度押して確定', () => {
     const name = currentName();
     if (!name) return;
     if (!findUser(loadUsers(), name)) return;
-    if (confirm(`「${name}」を削除しますか？`)) {
-      saveUsers(loadUsers().filter(x => x.name !== name));
-      nameInput.value = '';
-      renderAll();
-    }
+    saveUsers(loadUsers().filter(x => x.name !== name));
+    nameInput.value = '';
+    renderAll();
   });
 
   nameInput.addEventListener('input', renderCurrent);
