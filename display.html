@@ -176,20 +176,12 @@
   </div>
 </div>
 
-<script>
-  const USERS_KEY = 'gogo_users';
-  const EVENT_KEY = 'gogo_event';
+<script type="module">
+  import { db, auth } from './firebase-config.js';
+  import { ref, onValue } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+  import { signInAnonymously } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 
   let prevPoints = {};
-
-  function loadUsers() {
-    try {
-      const v = JSON.parse(localStorage.getItem(USERS_KEY));
-      return Array.isArray(v) ? v : [];
-    } catch (e) {
-      return [];
-    }
-  }
 
   function render(users) {
     const board = document.getElementById('board');
@@ -249,18 +241,24 @@
     overlay.classList.add('show', type);
   }
 
-  render(loadUsers());
+  signInAnonymously(auth).then(() => {
+    onValue(ref(db, 'users'), (snap) => {
+      const val = snap.val() || {};
+      const users = Object.values(val);
+      render(users);
+    });
 
-  window.addEventListener('storage', (e) => {
-    if (e.key === USERS_KEY) {
-      render(loadUsers());
-    }
-    if (e.key === EVENT_KEY && e.newValue) {
-      try {
-        const data = JSON.parse(e.newValue);
-        showEvent(data.type, data.name);
-      } catch (err) { /* ignore malformed event */ }
-    }
+    // onValueはリスナー登録時に現在値で即発火するため、初回は「起動前からある古いイベント」として無視する。
+    let eventReady = false;
+    onValue(ref(db, 'event'), (snap) => {
+      if (!eventReady) {
+        eventReady = true;
+        return;
+      }
+      const data = snap.val();
+      if (!data) return;
+      showEvent(data.type, data.name);
+    });
   });
 </script>
 

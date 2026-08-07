@@ -191,10 +191,84 @@
     margin-top: 6px;
     line-height: 1.6;
   }
+
+  .hidden { display: none !important; }
+
+  #passcode-gate {
+    position: fixed;
+    inset: 0;
+    background: var(--ow-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  #passcode-card {
+    width: 260px;
+    text-align: center;
+    padding: 32px 28px;
+    background: var(--ow-dark2);
+    border: 2px solid var(--ow-orange);
+    border-radius: 12px;
+  }
+  #passcode-card h2 {
+    color: var(--ow-orange);
+    font-size: 16px;
+    letter-spacing: 2px;
+    margin: 0 0 16px;
+  }
+  #passcode-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 28px;
+    letter-spacing: 8px;
+    text-align: center;
+    padding: 10px 0;
+    border-radius: 6px;
+    border: 2px solid var(--ow-dark);
+    background: var(--ow-dark);
+    color: var(--ow-white);
+    margin-bottom: 12px;
+  }
+  #passcode-input:focus { outline: none; border-color: var(--ow-orange); }
+  #passcode-submit {
+    width: 100%;
+    font-size: 16px;
+    font-weight: 900;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 0;
+    background: var(--ow-orange);
+    color: var(--ow-dark);
+    cursor: pointer;
+  }
+  #passcode-error {
+    min-height: 18px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--ow-red);
+  }
+
+  .lock-link {
+    text-align: center;
+    color: #555;
+    font-size: 11px;
+    margin-top: 16px;
+    cursor: pointer;
+  }
+  .lock-link:hover { color: var(--ow-orange); }
 </style>
 </head>
 <body>
-<div id="wrap">
+<div id="passcode-gate">
+  <div id="passcode-card">
+    <h2>パスコードを入力</h2>
+    <input id="passcode-input" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
+    <button id="passcode-submit">解除</button>
+    <div id="passcode-error"></div>
+  </div>
+</div>
+<div id="wrap" class="hidden">
   <h1>ゴーゴークイック 操作パネル</h1>
 
   <div id="name-field">
@@ -246,30 +320,24 @@
     合計 +10 到達 → 次の回は抜けられる（フルパ以上）／指定キャラ強制（フルパ以下）→ 本人のみ自動で0にリセット<br>
     合計 −10 到達 → IGLの権利 1ウェーブ → 本人のみ自動で0にリセット
   </div>
+  <div class="lock-link" id="btn-lock">🔒 パスコードを再入力</div>
 </div>
 
-<script>
-  const USERS_KEY = 'gogo_users';
-  const EVENT_KEY = 'gogo_event';
+<script type="module">
+  import { db, auth } from './firebase-config.js';
+  import { ref, onValue, push, set, remove, runTransaction } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+  import { signInAnonymously } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+
+  const CONTROL_PASSCODE = '1234'; // 配信直前に書き換えてよい。リポジトリがpublicなため秘匿情報ではない
+  const UNLOCK_KEY = 'gogo_control_unlocked';
 
   const nameInput = document.getElementById('name-input');
   const currentEl = document.getElementById('current');
 
-  function loadUsers() {
-    try {
-      const v = JSON.parse(localStorage.getItem(USERS_KEY));
-      return Array.isArray(v) ? v : [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  function saveUsers(users) {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  }
+  let usersCache = [];
 
   function fireEvent(type, name) {
-    localStorage.setItem(EVENT_KEY, JSON.stringify({ type, name, ts: Date.now() }));
+    set(ref(db, 'event'), { type, name, ts: Date.now() });
   }
 
   function findUser(users, name) {
@@ -306,8 +374,7 @@
 
   function renderCurrent() {
     const name = currentName();
-    const users = loadUsers();
-    const user = findUser(users, name);
+    const user = findUser(usersCache, name);
     const points = user ? user.points : 0;
     currentEl.textContent = (points > 0 ? '+' : '') + points;
     currentEl.classList.toggle('positive', points > 0);
@@ -351,9 +418,7 @@
       delBtn.textContent = '×';
       delBtn.title = 'もう一度押すと削除';
       armConfirm(delBtn, '確定', () => {
-        const remaining = loadUsers().filter(x => x.name !== u.name);
-        saveUsers(remaining);
-        renderAll();
+        remove(ref(db, `users/${u.id}`));
       });
 
       row.addEventListener('click', () => {
@@ -369,45 +434,47 @@
   }
 
   function renderAll() {
-    const users = loadUsers();
-    renderSuggestions(users);
-    renderUserList(users);
+    renderSuggestions(usersCache);
+    renderUserList(usersCache);
     renderCurrent();
   }
 
   const MAX_USERS = 5;
 
-  function addPoint(delta) {
+  async function addPoint(delta) {
     const name = currentName();
     if (!name) {
       nameInput.focus();
       return;
     }
-    const users = loadUsers();
-    let user = findUser(users, name);
+    const user = findUser(usersCache, name);
+    document.getElementById('name-msg').textContent = '';
+
     if (!user) {
-      if (users.length >= MAX_USERS) {
+      if (usersCache.length >= MAX_USERS) {
         document.getElementById('name-msg').textContent = `参加者は最大${MAX_USERS}人までです`;
         return;
       }
-      user = { name, points: 0 };
-      users.push(user);
-    }
-    document.getElementById('name-msg').textContent = '';
-    user.points += delta;
-
-    let eventType = null;
-    if (user.points >= 10) {
-      eventType = 'bonus';
-      user.points = 0;
-    } else if (user.points <= -10) {
-      eventType = 'penalty';
-      user.points = 0;
+      await set(push(ref(db, 'users')), { name, points: delta });
+      return;
     }
 
-    saveUsers(users);
-    if (eventType) fireEvent(eventType, name);
-    renderAll();
+    // 複数端末からの同時操作でも他人の操作を上書きしないよう、ポイントはフィールド単位のトランザクションで更新する
+    let firedEvent = null;
+    await runTransaction(ref(db, `users/${user.id}/points`), (current) => {
+      let next = (current || 0) + delta;
+      if (next >= 10) {
+        firedEvent = 'bonus';
+        next = 0;
+      } else if (next <= -10) {
+        firedEvent = 'penalty';
+        next = 0;
+      } else {
+        firedEvent = null;
+      }
+      return next;
+    });
+    if (firedEvent) fireEvent(firedEvent, name);
   }
 
   document.getElementById('btn-plus').addEventListener('click', () => addPoint(1));
@@ -416,21 +483,19 @@
   armConfirm(document.getElementById('btn-reset-user'), 'もう一度押して確定', () => {
     const name = currentName();
     if (!name) return;
-    const users = loadUsers();
-    const user = findUser(users, name);
+    const user = findUser(usersCache, name);
     if (!user) return;
-    user.points = 0;
-    saveUsers(users);
-    renderAll();
+    set(ref(db, `users/${user.id}/points`), 0);
   });
 
   armConfirm(document.getElementById('btn-delete-user'), 'もう一度押して確定', () => {
     const name = currentName();
     if (!name) return;
-    if (!findUser(loadUsers(), name)) return;
-    saveUsers(loadUsers().filter(x => x.name !== name));
+    const user = findUser(usersCache, name);
+    if (!user) return;
+    remove(ref(db, `users/${user.id}`));
     nameInput.value = '';
-    renderAll();
+    renderCurrent();
   });
 
   nameInput.addEventListener('input', () => {
@@ -447,11 +512,52 @@
     if (e.key === '-' || e.key === '_') addPoint(-1);
   });
 
-  window.addEventListener('storage', (e) => {
-    if (e.key === USERS_KEY) renderAll();
+  async function initApp() {
+    await signInAnonymously(auth);
+    onValue(ref(db, 'users'), (snap) => {
+      const val = snap.val() || {};
+      usersCache = Object.entries(val).map(([id, u]) => ({ id, name: u.name, points: u.points }));
+      renderAll();
+    });
+  }
+
+  const gate = document.getElementById('passcode-gate');
+  const wrap = document.getElementById('wrap');
+  const passcodeInput = document.getElementById('passcode-input');
+  const passcodeError = document.getElementById('passcode-error');
+
+  function unlock() {
+    gate.classList.add('hidden');
+    wrap.classList.remove('hidden');
+    initApp();
+  }
+
+  function tryUnlock() {
+    if (passcodeInput.value === CONTROL_PASSCODE) {
+      localStorage.setItem(UNLOCK_KEY, '1');
+      unlock();
+    } else {
+      passcodeError.textContent = 'パスコードが違います';
+      passcodeInput.value = '';
+      passcodeInput.focus();
+    }
+  }
+
+  document.getElementById('passcode-submit').addEventListener('click', tryUnlock);
+  passcodeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') tryUnlock();
   });
 
-  renderAll();
+  document.getElementById('btn-lock').addEventListener('click', () => {
+    localStorage.removeItem(UNLOCK_KEY);
+    location.reload();
+  });
+
+  if (localStorage.getItem(UNLOCK_KEY) === '1') {
+    unlock();
+  } else {
+    passcodeInput.focus();
+  }
 </script>
 </body>
 </html>
